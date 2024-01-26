@@ -42,7 +42,7 @@ def download_terraform(version, os_name, architecture):
         shutil.copyfileobj(response.raw, temp_file)
         return temp_file.name
 
-def install_terraform(version, install_dir, zip_path):
+def install_terraform(install_dir, zip_path):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(install_dir)
     os.chmod(os.path.join(install_dir, 'terraform'), 0o755)
@@ -99,7 +99,7 @@ def main():
     else:
         tf_version = None
         try:
-            with open('terraform.lock.hcl', 'r') as lock_file:
+            with open('.terraform.lock.hcl', 'r') as lock_file:
                 content = lock_file.read()
                 match = re.search(r'version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', content)
                 if match:
@@ -120,7 +120,7 @@ def main():
 
         try:
             temp_zip_path = download_terraform(tf_version, os_name, architecture)
-            install_terraform(tf_version, tf_dir_path, temp_zip_path)
+            install_terraform(tf_dir_path, temp_zip_path)
             os.remove(temp_zip_path)
         except requests.HTTPError as e:
             sys.exit(f"Failed to download Terraform: {e}")
