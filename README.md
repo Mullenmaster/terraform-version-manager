@@ -7,6 +7,7 @@ Terraform Version Manager (TVM) is a command-line tool that allows you to easily
 - [Terraform Version Manager (TVM) - Command Line Tool](#terraform-version-manager-tvm---command-line-tool)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
+    - [Permissions on WSL2](#permissions-on-wsl2)
   - [Usage](#usage)
     - [Install a Specific Version](#install-a-specific-version)
     - [Check Currently Installed Version](#check-currently-installed-version)
@@ -27,6 +28,15 @@ pip install .
 
 # verify the install
 tvm --version
+```
+
+### Permissions on WSL2
+
+You may need to open up access to your install directory:
+
+```bash
+sudo chown -R your_username:your_username /path/to/installation/directory
+sudo chmod -R u+w /path/to/installation/directory
 ```
 
 ## Usage

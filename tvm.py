@@ -46,9 +46,21 @@ def create_symlink(target, link_path):
     os.symlink(target, link_path)
 
 def get_tf_bin_path():
-    tf_path = shutil.which("terraform")
-    if tf_path:
-        return tf_path
+    current_platform = platform.system().lower()
+    
+    if current_platform == 'darwin':
+        # macOS (Homebrew)
+        tf_path = subprocess.run(['brew', '--prefix', 'terraform'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if tf_path.returncode == 0:
+            return os.path.join(tf_path.stdout.strip(), 'bin', 'terraform')
+    
+    if current_platform == 'linux' and os.geteuid() == 0:
+        return os.path.join(os.path.expanduser("~"), ".tfVersions", args.terraform_version, 'terraform')
+    
+    tf_path = subprocess.run(['which', 'terraform'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if tf_path.returncode == 0:
+        return tf_path.stdout.strip()
+    
     return "/usr/local/bin/terraform"  # Default path if Terraform is not installed
 
 def list_available_versions():
@@ -68,7 +80,7 @@ def list_available_versions():
         sys.exit(f"Failed to fetch available Terraform versions. Status code: {response.status_code}")
 
 def detect_installed_version():
-    tf_path = shutil.which("terraform")
+    tf_path = get_tf_bin_path()
 
     if tf_path:
         try:
@@ -102,12 +114,17 @@ def install_subcommand(args):
     os_name, architecture = get_system_architecture()
     tf_bin_path = get_tf_bin_path()
     
-    if args.version == "latest":
-        args.version = get_latest_version()  # Get the latest version
-        if not args.version:
+    if args.terraform_version == "latest":
+        args.terraform_version = get_latest_version()  # Get the latest version
+        if not args.terraform_version:
             sys.exit("Error: No Terraform version found. Please specify a valid version or use 'list' to see available versions.")
     
-    tf_dir_path = os.path.join(os.path.dirname(tf_bin_path), f".tfVersions/{args.version}")
+    tf_dir_path = os.path.join(os.path.dirname(tf_bin_path), f".tfVersions/{args.terraform_version}")
+
+    if platform.system().lower() == "linux" and "Microsoft" in platform.uname().release:
+        # Running on WSL, use the user's home directory as the destination
+        tf_dir_path = os.path.join(os.path.expanduser("~"), ".tfVersions", args.terraform_version)
+
     tf_version_path = os.path.join(tf_dir_path, 'terraform')
 
     if not os.path.isfile(tf_version_path):
@@ -115,8 +132,8 @@ def install_subcommand(args):
             os.makedirs(tf_dir_path)
 
         try:
-            temp_zip_path = download_terraform(args.version, os_name, architecture)
-            install_terraform(args.version, tf_dir_path, temp_zip_path)
+            temp_zip_path = download_terraform(args.terraform_version, os_name, architecture)
+            install_terraform(args.terraform_version, tf_dir_path, temp_zip_path)
             os.remove(temp_zip_path)
         except requests.HTTPError as e:
             sys.exit(f"Failed to download Terraform: {e}")
@@ -154,7 +171,7 @@ def main():
     subparsers = parser.add_subparsers()
 
     install_parser = subparsers.add_parser('install', help='Install a specific version of Terraform. E.g. `tvm install latest`, `tvm install 1.5.7`')
-    install_parser.add_argument('version', help='Specify the version of Terraform to install.')
+    install_parser.add_argument('terraform_version', help='Specify the version of Terraform to install.')
     install_parser.set_defaults(func=install_subcommand)
 
     current_parser = subparsers.add_parser('current', help='Show the currently installed Terraform version.')
