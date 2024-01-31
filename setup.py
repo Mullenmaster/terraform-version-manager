@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name='terraform-version-manager',
     version='1.0.0',
-    description='Terraform Version Manager',
+    description='Terraform Version Manager (tvm): A tool for switching between different versions of Terraform.',
     author='Peter Mullenmaster',
     author_email='mullenmaster@outlook.com',
     url='https://github.com/mullenmaster/terraform-version-manager',
@@ -18,4 +18,5 @@ setup(
             'tvm = tvm:main',
         ],
     },
+    license='MIT',
 )

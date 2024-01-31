@@ -9,19 +9,12 @@ import tempfile
 import argparse
 import platform
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Terraform Version Manager: A tool for switching between different versions of Terraform.')
-    parser.add_argument('-v', '--version', nargs='?', help='Specify the version of Terraform to use. Example: -v 0.12.19')
-    parser.add_argument('-l', '--list', action='store_true', help='List available Terraform versions') 
-    return parser.parse_args()
-
-
 def get_system_architecture():
     os_name = platform.system().lower()
     architecture = platform.machine()
     print(f"Detected OS: {os_name}")
     print(f"Detected Architecture: {architecture}")
-    
+
     if architecture == 'x86_64' or architecture == 'AMD64':
         architecture = 'amd64'
     elif architecture.startswith('arm') or architecture.startswith('aarch64'):
@@ -33,7 +26,7 @@ def get_system_architecture():
 def download_terraform(version, os_name, architecture):
     terraform_url = f"https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{os_name}_{architecture}.zip"
     response = requests.get(terraform_url, stream=True)
-    
+
     if response.status_code == 404:
         sys.exit(f"Error: Terraform version {version} is not available for your OS and architecture.")
     response.raise_for_status()
@@ -42,7 +35,7 @@ def download_terraform(version, os_name, architecture):
         shutil.copyfileobj(response.raw, temp_file)
         return temp_file.name
 
-def install_terraform(install_dir, zip_path):
+def install_terraform(version, install_dir, zip_path):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(install_dir)
     os.chmod(os.path.join(install_dir, 'terraform'), 0o755)
@@ -63,9 +56,9 @@ def list_available_versions():
     if response.status_code == 200:
         page_content = response.text
         versions = re.findall(r'<a href="/terraform/([0-9]+\.[0-9]+\.[0-9]+)/"', page_content)
-        
+
         installed_version = detect_installed_version()
-        
+
         for version in versions:
             if version == installed_version:
                 print(f"\033[92m* {version}\033[0m")
@@ -76,7 +69,7 @@ def list_available_versions():
 
 def detect_installed_version():
     tf_path = shutil.which("terraform")
-    
+
     if tf_path:
         try:
             version_output = subprocess.check_output([tf_path, "-v"], stderr=subprocess.STDOUT).decode()
@@ -87,31 +80,34 @@ def detect_installed_version():
             pass
     return None
 
-def main():
-    args = parse_arguments()
+def get_latest_version():
+    response = requests.get("https://releases.hashicorp.com/terraform/")
+    if response.status_code == 200:
+        page_content = response.text
+        versions = re.findall(r'<a href="/terraform/([0-9]+\.[0-9]+\.[0-9]+)/"', page_content)
 
-    if args.list:
-        list_available_versions()
-        return
+        # Initialize a variable to store the latest version
+        latest_version = None
 
-    if args.version:
-        tf_version = args.version
-    else:
-        tf_version = None
-        try:
-            with open('.terraform.lock.hcl', 'r') as lock_file:
-                content = lock_file.read()
-                match = re.search(r'version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"', content)
-                if match:
-                    tf_version = match.group(1)
-                else:
-                    raise ValueError("Terraform version not found in terraform.lock.hcl.")
-        except FileNotFoundError:
-            sys.exit("Error: No terraform.lock.hcl file found. Please specify a Terraform version using -v.")
+        # Loop through the versions and find the highest version
+        for version in versions:
+            if latest_version is None or version > latest_version:
+                latest_version = version
 
+        return latest_version
+
+    return None
+
+def install_subcommand(args):
     os_name, architecture = get_system_architecture()
     tf_bin_path = get_tf_bin_path()
-    tf_dir_path = os.path.join(os.path.dirname(tf_bin_path), f".tfVersions/{tf_version}")
+    
+    if args.version == "latest":
+        args.version = get_latest_version()  # Get the latest version
+        if not args.version:
+            sys.exit("Error: No Terraform version found. Please specify a valid version or use 'list' to see available versions.")
+    
+    tf_dir_path = os.path.join(os.path.dirname(tf_bin_path), f".tfVersions/{args.version}")
     tf_version_path = os.path.join(tf_dir_path, 'terraform')
 
     if not os.path.isfile(tf_version_path):
@@ -119,8 +115,8 @@ def main():
             os.makedirs(tf_dir_path)
 
         try:
-            temp_zip_path = download_terraform(tf_version, os_name, architecture)
-            install_terraform(tf_dir_path, temp_zip_path)
+            temp_zip_path = download_terraform(args.version, os_name, architecture)
+            install_terraform(args.version, tf_dir_path, temp_zip_path)
             os.remove(temp_zip_path)
         except requests.HTTPError as e:
             sys.exit(f"Failed to download Terraform: {e}")
@@ -132,6 +128,51 @@ def main():
         print(version_output.split('\n')[0])
     except subprocess.CalledProcessError as e:
         sys.exit(f"Error in executing Terraform: {e}")
+
+def current_subcommand(args):
+    installed_version = detect_installed_version()
+    if installed_version:
+        print(f"Currently installed Terraform version: {installed_version}")
+    else:
+        print("Terraform is not currently installed.")
+
+def list_subcommand(args):
+    list_available_versions()
+
+def help_subcommand(args):
+    print("Terraform Version Manager: A tool for switching between different versions of Terraform. Run `tvm -h` for more information.")
+    
+def show_version(args):
+    import pkg_resources
+    version = pkg_resources.get_distribution("terraform-version-manager").version
+    print(f"TVM (Terraform Version Manager) version {version}")
+    
+def main():
+    parser = argparse.ArgumentParser(description='Terraform Version Manager: A tool for switching between different versions of Terraform.')
+    parser.add_argument('--version', action='store_true', help='Show the version of TVM')
+
+    subparsers = parser.add_subparsers()
+
+    install_parser = subparsers.add_parser('install', help='Install a specific version of Terraform. E.g. `tvm install latest`, `tvm install 1.5.7`')
+    install_parser.add_argument('version', help='Specify the version of Terraform to install.')
+    install_parser.set_defaults(func=install_subcommand)
+
+    current_parser = subparsers.add_parser('current', help='Show the currently installed Terraform version.')
+    current_parser.set_defaults(func=current_subcommand)
+
+    list_parser = subparsers.add_parser('list', help='List available Terraform versions.')
+    list_parser.set_defaults(func=list_subcommand)
+
+    help_parser = subparsers.add_parser('help', help='Show this help message.')
+    help_parser.set_defaults(func=help_subcommand)
+
+    args = parser.parse_args()
+    if args.version:
+        show_version(args)
+    elif hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

@@ -1,67 +1,78 @@
-# Terraform Version Manager (TVM)
+# Terraform Version Manager (TVM) - Command Line Tool
 
-Terraform Version Manager (TVM) is a Python tool for easily switching between different versions of Terraform. This tool simplifies the process of managing and using different Terraform versions on your system and is cross-platform compatible.
+Terraform Version Manager (TVM) is a command-line tool that allows you to easily switch between different versions of Terraform, the infrastructure as code (IaC) tool developed by HashiCorp. With TVM, you can install, manage, and use multiple versions of Terraform on your system.
+
+## Table of Contents
+
+- [Terraform Version Manager (TVM) - Command Line Tool](#terraform-version-manager-tvm---command-line-tool)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Usage](#usage)
+    - [Install a Specific Version](#install-a-specific-version)
+    - [Check Currently Installed Version](#check-currently-installed-version)
+    - [List Available Terraform Versions](#list-available-terraform-versions)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Installation
 
-### Prerequisites
+To install Terraform Version Manager (TVM), follow these steps:
 
-Before using TVM, make sure you have the following prerequisites installed:
-
-- Python 3.x
-- pip (Python package manager)
-- Homebrew (Only required for macOS)
-
-### Installation Steps
+1. Clone, install, and verify tvm on your local machine by running:
 
 ```bash
 git clone https://github.com/mullenmaster/terraform-version-manager
 cd terraform-version-manager
 pip install .
+
+# verify the install
+tvm --version
 ```
 
 ## Usage
 
-TVM provides a command-line interface to manage Terraform versions. Here are some common usage examples:
+TVM provides a set of commands to manage Terraform versions. Here are the available commands and their usage:
 
-### Specify a Terraform Version
+### Install a Specific Version
 
-To specify a particular Terraform version to use, you can pass the `-v` or `--version` option followed by the desired version number. For example:
-
-```bash
-tvm -v 0.12.19
-```
-
-This command will download and set up Terraform version 0.12.19.
-
-### Automatically Detect and Use Terraform Version
-
-If you don't specify a version, TVM will attempt to detect the version based on your project's `terraform.lock.hcl` file. If the file is found and contains a version specification, TVM will use that version.
+To install a specific version of Terraform, use the `install` command followed by the desired version number. For example, to install Terraform version 1.5.7, run:
 
 ```bash
-tvm
+tvm install 1.5.7
 ```
 
-### Listing Available Terraform Versions
-
-You can list all available Terraform versions and see the current version using the following command:
+You can also use the `latest` keyword to install the latest available version of Terraform:
 
 ```bash
-tvm -l
+tvm install latest
 ```
 
-### Uninstalling TVM
+If the specified version or `latest` is not available for your operating system and architecture, TVM will display an error message.
 
-To uninstall TVM, you can use pip:
+### Check Currently Installed Version
+
+To check the currently installed version of Terraform, use the `current` command:
 
 ```bash
-pip uninstall terraform-version-manager
+tvm current
 ```
+
+This command will display the currently installed Terraform version.
+
+### List Available Terraform Versions
+
+To list all available Terraform versions that you can install, use the `list` command:
+
+```bash
+tvm list
+```
+
+The command will fetch and display a list of available Terraform versions. The currently installed version, if any, will be highlighted with an asterisk (\*) in front of it.
 
 ## Contributing
 
-Contributions to TVM are welcome! If you find issues or have ideas for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/mullenmaster/terraform-version-manager).
+Contributions to Terraform Version Manager (TVM) are welcome! If you find any issues, have ideas for improvements, or want to contribute code, please check out the [contribution guidelines](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Terraform Version Manager (TVM) is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
